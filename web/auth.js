@@ -43,3 +43,13 @@ export async function refresh() {
   if (!s?.sessionToken) return null;
   try { s.jwt = await fetchJwt(s.sessionToken); save(s); return s; } catch { return null; }
 }
+
+/** Completes a password reset using the one-time token from the emailed link. */
+export async function resetPassword(token, newPassword) {
+  const res = await post("/reset-password", { token, newPassword });
+  if (!res.ok) {
+    const code = res.json?.code || "";
+    if (/INVALID_TOKEN|EXPIRED/.test(code) || res.status === 400) throw new Error(res.json?.message || "This link has expired or was already used. Ask for a new reset email.");
+    throw new Error(res.json?.message || `Could not set the password (${res.status}).`);
+  }
+}

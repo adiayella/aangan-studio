@@ -1,6 +1,6 @@
 import { API_URL, STAGES } from "./config.js";
 import { DEMO_LEADS, DESIGNERS } from "./demo-data.js";
-import { signIn, signOut, stored, refresh } from "./auth.js";
+import { signIn, signOut, stored, refresh, resetPassword } from "./auth.js";
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[m]);
@@ -202,3 +202,28 @@ $("dlgForm").addEventListener("submit", async (e) => {
 
 $("designer").innerHTML = `<option value="all">All designers</option>` + DESIGNERS.map((d) => `<option>${esc(d)}</option>`).join("");
 load();
+
+// ---- password reset (arrives from the emailed link as ?token=...) ----
+{
+  const q = new URLSearchParams(location.search);
+  const token = q.get("token");
+  const linkError = q.get("error");
+  if (token || linkError) history.replaceState(null, "", location.pathname); // never leave the one-time code in the address bar
+  if (linkError) banner("That password link is invalid or has expired. Ask your admin for a new reset email.", true);
+  if (token) {
+    $("resetDlg").showModal();
+    $("resetForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const p1 = $("newPw").value, p2 = $("newPw2").value, err = $("resetErr"), go = $("resetGo");
+      if (p1 !== p2) { err.textContent = "The two passwords do not match."; err.hidden = false; return; }
+      go.disabled = true; go.textContent = "Saving…"; err.hidden = true;
+      try {
+        await resetPassword(token, p1);
+        $("newPw").value = ""; $("newPw2").value = "";
+        $("resetDlg").close();
+        banner("Password set. Click Sign in and use your email and the new password.");
+      } catch (x) { err.textContent = x.message; err.hidden = false; }
+      finally { go.disabled = false; go.textContent = "Set password"; }
+    });
+  }
+}
