@@ -1,0 +1,16 @@
+AGENT: Hello! Thank you for calling Aangan Studio. I am the studio's AI assistant. How can I help you with your interior design project today?
+USER: Hi, I have a 3BHK flat in Baner, about 1200 sq ft. I want a complete redesign with execution, ready in about six months. I'm the owner.
+AGENT: Hello! That sounds like a wonderful project, and a Three BHK in Baner with a six-month timeline is right up our alley.
+AGENT: May I please have your name?
+USER: My name is ZZ Test Caller
+AGENT: Thank you, ZZ.
+AGENT: May I please have your phone number so we can reach you if needed?
+USER: 9000000011. Yes, I'd like an appointment to discuss the project.
+AGENT: Thank you! Just to confirm, that is nine to zero-zero to zero-zero to zero-zero to zero-one to one, correct? Could you also share your email address so we can send over the calendar invitation for the meeting?
+USER: Yes that's correct. My email is ayella.adwaith@gmail.com
+AGENT: Thank you! Let me read that back to make sure I have it right: a-y-e-l-l-a dot a-d-w-a-i-t-h at g-m-a-i-l dot c-o-m.
+AGENT: Is that correct?
+USER: Yes, correct. I'm free on Tuesday 13 October in the afternoon, I'm in India.
+AGENT: I am sorry, I encountered an error. Please try again.
+USER: Please check which times are free on 13 October afternoon.
+AGENT: I am sorry, I encountered an error. Please try again.

@@ -12,7 +12,7 @@ const { db, closeDb } = await import("../src/db/pool.js");
 const { processPostCall } = await import("../src/pipeline/processCall.js");
 const { parseVaaniEvent } = await import("../src/vaani/payload.js");
 
-const ev = parseVaaniEvent({ event: "call_postprocessing", call_id: key, timestamp: startedAt, data: { room_name: key, call_id: key, call_duration: Number(dur) * 1000, end_reason: "session_ended", summary: "", transcript: readFileSync(file, "utf8") } });
+const ev = parseVaaniEvent({ event: "call_postprocessing", call_id: key, timestamp: startedAt, data: { room_name: key, call_id: key, call_duration: Number(dur), end_reason: "session_ended", summary: "", transcript: readFileSync(file, "utf8") } });
 if (ev.kind !== "call_postprocessing") throw new Error("bad event");
 console.log(`Importing ${key} (HubSpot ${mock ? "MOCK" : "LIVE"})\n`);
 const r = await processPostCall(db(), ev, { vaaniActualCostInr: cost ? Number(cost) : null });

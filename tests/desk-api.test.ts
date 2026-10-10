@@ -89,4 +89,11 @@ describe("Designer Desk private links", () => {
   it("responses are not cached", async () => {
     expect((await get(TEAM_KEY)).headers.get("cache-control")).toBe("no-store");
   });
+  it("public view lists every lead but never exposes contact details or links", async () => {
+    const r = await fetch(`${base}/public`);
+    expect(r.status).toBe(200);
+    const d: any = await r.json();
+    expect(d.leads.length).toBe(leads.length);
+    for (const l of d.leads) for (const k of ["phone", "email", "meet_link", "notes", "hubspot_deal_id", "hubspot_url"]) expect(l).not.toHaveProperty(k);
+  });
 });

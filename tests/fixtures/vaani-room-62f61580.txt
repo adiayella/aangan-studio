@@ -1,0 +1,3 @@
+AGENT: Hello! Thank you for calling Aangan Studio. I am the studio's AI assistant. How can I help you with your interior design project today?
+USER: What appointment times are free on 13 October 2026? I am in India.
+AGENT: I am sorry, I encountered an error. Please try again.

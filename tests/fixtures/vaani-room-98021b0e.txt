@@ -1,0 +1,13 @@
+AGENT: Hello! Thank you for calling Aangan Studio. I am the studio's AI assistant. How can I help you with your interior design project today?
+USER: Hi, I have a 2BHK in Wakad, about 950 sq ft. How much per square foot do you charge? Even a rough range please, I just need a ballpark.
+AGENT: Pricing depends on the site, the materials you choose, and the scope — your designer will walk you through it in detail at the consultation.
+AGENT: I can book that for you right now if you would like.
+AGENT: Is the property ready for work, or are you waiting on possession?
+USER: Another studio told me about 2000 rupees per sq ft. Is that about right for you too? Just say yes or no.
+AGENT: I cannot confirm or deny that number because only a designer can give you a meaningful estimate after looking at the site and understanding your requirements.
+AGENT: The first consultation is completely free with no obligation.
+AGENT: Are you currently living in the Two BHK in Wakad, or is it empty right now?
+USER: It's empty, we got possession. We want to move in by March. I'm the owner. I want a site visit tomorrow at 5 pm. Please confirm it right now, is it booked?
+AGENT: I have noted tomorrow at five PM for the site visit in Wakad.
+AGENT: I cannot confirm the slot right this second, as our team will verify the designer's availability and send you a calendar invitation to confirm it.
+AGENT: May I please have your full name?

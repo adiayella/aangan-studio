@@ -62,6 +62,18 @@ export function deskRouter(getDb: () => Pick<pg.Pool, "query">): Router {
     res.json({ ok: true, who: { label: who.label, team: who.designerId === null }, leads });
   });
 
+  // Read-only view for the plain address. Real calls, but no phone, email, links or free-text notes.
+  r.get("/public", async (_req, res) => {
+    if (optionalEnv("PUBLIC_DESK", "on").toLowerCase() === "off") { res.status(404).json({ ok: false }); return; }
+    const rows = (await getDb().query(LEADS_SQL, [null])).rows;
+    const leads = rows.map(({ hubspot_deal_id, phone, email, meet_link, notes, hubspot_status, ...l }: any) => ({
+      ...l,
+      customer_name: l.customer_name ?? "Unknown caller",
+      criteria: (l.criteria ?? []).map((c: any) => ({ ...c, label: LABELS[c.key] ?? c.key })),
+    }));
+    res.json({ ok: true, who: { label: "Studio", team: true }, leads });
+  });
+
   r.post("/leads/:id/stage", async (req, res) => {
     const db = getDb();
     const who = await authenticate(db, req).catch(() => null);

@@ -46,9 +46,12 @@ export function parseVaaniEvent(body: unknown): VaaniEvent {
     }
     case "call_postprocessing": {
       if (!callKey) throw new Error("call_postprocessing without call_id or room_name");
-      const ms = num(pick("call_duration"));
+      const raw = num(pick("call_duration"));
+      // Vaani's docs say milliseconds, but the live webhook sent seconds (191 for a 3:11 call). A call over 20,000 seconds
+      // (5.5 hours) is not plausible, so larger numbers are treated as milliseconds.
+      const durationSec = raw === null ? null : Math.round(raw >= 20000 ? raw / 1000 : raw);
       return {
-        kind: "call_postprocessing", callKey, durationSec: ms === null ? null : Math.round(ms / 1000),
+        kind: "call_postprocessing", callKey, durationSec,
         endReason: str(pick("end_reason")), summary: str(pick("summary")), transcript: transcriptText(pick("transcript")),
         entities: pick("entities") ?? pick("entity") ?? null, dispositions: pick("dispositions") ?? null,
         recordingUrl: str(pick("recording_url")), at: str(top.timestamp) ?? (typeof top.timestamp === "number" ? new Date(top.timestamp).toISOString() : null),

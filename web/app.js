@@ -59,10 +59,17 @@ async function load() {
     pickDefaults();
     return render();
   }
-  if (!state.key) { state.demo = true; state.noKey = true; return load(); }
+  if (!state.key) {
+    try {
+      const d = await api("/public");
+      state.live = true; state.readOnly = true; state.who = d.who; state.leads = d.leads;
+      banner("Live calls from the Vaani voice agent. Contact details are hidden here; open your private link to see them and update stages.");
+      pickDefaults(); return render();
+    } catch { state.demo = true; state.noKey = true; return load(); }
+  }
   try {
     const d = await api("/leads");
-    state.live = true; state.who = d.who; state.leads = d.leads;
+    state.live = true; state.readOnly = false; state.who = d.who; state.leads = d.leads;
     banner(null);
     pickDefaults();
     render();
@@ -151,13 +158,13 @@ function render() {
   $("list").innerHTML = rows.length ? rows.map(card).join("") : `<li class="empty">Nothing here right now.</li>`;
   renderDetail();
 
-  $("who").textContent = state.live ? `${state.who?.label ?? ""} · Live` : state.noKey ? "Sample data" : "Demo";
+  $("who").textContent = state.live ? (state.readOnly ? "Live · read-only" : `${state.who?.label ?? ""} · Live`) : state.noKey ? "Sample data" : "Demo";
   $("who").className = "chip" + (state.live ? " live" : "");
   const team = !!state.who?.team;
   const names = [...new Set(state.leads.map((l) => l.designer_name).filter(Boolean))];
   $("designer").hidden = !(team && names.length);
   $("designer").innerHTML = `<option value="all">All designers</option>` + names.map((d) => `<option ${state.designer === d ? "selected" : ""}>${esc(d)}</option>`).join("");
-  $("forget").hidden = state.demo;
+  $("forget").hidden = state.demo || state.readOnly;
   $("who").title = state.live ? "Real leads" : "Sample data, not real customers";
 }
 
@@ -212,7 +219,7 @@ function renderDetail() {
       <dt>Call length</dt><dd>${mins}</dd><dt>Designer email</dt><dd>${esc(l.email_status || "—")}</dd></dl></div>
     <div class="sec"><h3>Your progress</h3><div class="stage">
       <label class="sr" for="stage">Stage</label>
-      <select id="stage">${STAGES.map(([k, v]) => `<option value="${k}" ${k === l.stage ? "selected" : ""}>${v}</option>`).join("")}</select>
+      <select id="stage" ${state.readOnly ? "disabled" : ""}>${STAGES.map(([k, v]) => `<option value="${k}" ${k === l.stage ? "selected" : ""}>${v}</option>`).join("")}</select>
       <span class="hint">${state.live ? "Saved automatically." : "Demo: changes are not saved."}</span></div></div>`;
 }
 
@@ -229,4 +236,6 @@ $("designer").addEventListener("change", (e) => { state.designer = e.target.valu
 $("forget").addEventListener("click", () => { try { localStorage.removeItem(KEY_STORE); } catch {} state.key = null; locked(); });
 
 initAccess();
+// Real-time: refresh every 20 s while the tab is visible.
+setInterval(() => { if (!document.hidden && state.live) load(); }, 20000);
 load();

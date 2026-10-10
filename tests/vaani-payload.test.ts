@@ -16,6 +16,10 @@ describe("Vaani webhook payloads", () => {
     const e = parseVaaniEvent({ event: "call_postprocessing", call_id: "c1", summary: "s", transcript: "t", data: { call_duration: 60000 } });
     expect(e).toMatchObject({ kind: "call_postprocessing", summary: "s", transcript: "t", durationSec: 60 });
   });
+  it("call_postprocessing duration sent in SECONDS (as the live webhook does) is kept, not divided again", () => {
+    expect(parseVaaniEvent({ event: "call_postprocessing", call_id: "c1", data: { call_duration: 191, transcript: "t" } })).toMatchObject({ durationSec: 191 });
+    expect(parseVaaniEvent({ event: "call_postprocessing", call_id: "c1", data: { call_duration: 191000, transcript: "t" } })).toMatchObject({ durationSec: 191 });
+  });
   it("transcript given as turns is converted to AGENT/USER lines", () => {
     expect(transcriptText([{ role: "assistant", text: "Hello" }, { speaker: "user", content: "Hi" }])).toBe("AGENT: Hello\nUSER: Hi");
   });

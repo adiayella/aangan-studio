@@ -1,0 +1,6 @@
+AGENT: Hello! Thank you for calling Aangan Studio. I am the studio's AI assistant. How can I help you with your interior design project today?
+USER: I need to speak to someone right now. My project has been going for three months and my designer Aryan hasn't replied in five days. This is not acceptable. I'm Sheetal, my flat is in Viman Nagar.
+AGENT: I completely understand your frustration, Sheetal, and I am very sorry for the lack of communication from our end.
+AGENT: That is certainly not acceptable.
+AGENT: I am taking note of this right away.
+AGENT: Could you please confirm the best phone number to reach you at, and let me know if you would like a senior manager or team lead to call you back?

@@ -50,6 +50,10 @@ async function deliver(db: Db, enquiryId: string, kind: Kind, to: string, mail: 
      on conflict (enquiry_id, kind) do update set recipient=$3, status='queued', payload=$4`,
     [enquiryId, kind, to, JSON.stringify(mail)]);
   const r = await sendEmail(to, mail, `${kind}-${enquiryId}`);
+  if (r.ok && r.mock) {
+    await db.query("update notifications set status='skipped', last_error='MOCK mode: nothing was sent', attempts=0 where enquiry_id=$1 and kind=$2", [enquiryId, kind]);
+    return { status: "mock", detail: `MOCK, nothing sent: to ${r.to} (${note})` };
+  }
   if (r.ok) {
     await db.query("update notifications set status='sent', attempts=attempts+1, last_error=null, provider_id=$3, sent_at=now() where enquiry_id=$1 and kind=$2", [enquiryId, kind, r.id ?? (r.mock ? "mock" : null)]);
     return { status: r.mock ? "mock" : "sent", detail: `${r.mock ? "MOCK, nothing sent: " : ""}to ${r.to}${r.redirected ? ` (test redirect; intended ${to})` : ""} (${note})` };
