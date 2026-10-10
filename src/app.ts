@@ -1,5 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 import express from "express";
+import { join } from "node:path";
 import { db } from "./db/pool.js";
 import { parseCalEvent, recordCalBooking, signatureOk } from "./cal/webhook.js";
 import { processPostCall, recordCallEnded, recordCallStarted } from "./pipeline/processCall.js";
@@ -14,6 +15,9 @@ const safeEqual = (a: string, b: string) => {
   const x = Buffer.from(a), y = Buffer.from(b);
   return x.length === y.length && timingSafeEqual(x, y);
 };
+
+// The Designer Desk (static site). It holds no secrets; live data needs a sign-in.
+app.use(express.static(join(process.cwd(), "web"), { index: "index.html", maxAge: "5m" }));
 
 app.get("/health", (_req, res) => { res.json({ ok: true }); });
 
@@ -64,3 +68,5 @@ app.post("/webhooks/cal/:secret", async (req, res) => {
     res.status(500).json({ ok: false });
   }
 });
+
+export default app;
