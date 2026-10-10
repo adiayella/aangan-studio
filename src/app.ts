@@ -22,7 +22,8 @@ app.use((_req, res, next) => { res.setHeader("X-Robots-Tag", "noindex, nofollow"
 app.use("/api/desk", deskRouter(db));
 
 // The Designer Desk (static site). It holds no secrets; live data needs a sign-in.
-app.use(express.static(join(process.cwd(), "web"), { index: "index.html", maxAge: "5m" }));
+// no-cache = browsers re-check on every visit (cheap 304 when unchanged), so fixes show up immediately.
+app.use(express.static(join(process.cwd(), "web"), { index: "index.html", maxAge: 0, setHeaders: (res) => res.setHeader("Cache-Control", "no-cache") }));
 
 app.get("/health", (_req, res) => { res.json({ ok: true }); });
 

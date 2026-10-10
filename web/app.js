@@ -53,20 +53,30 @@ async function load() {
   if (state.demo) {
     state.live = false; state.who = { label: "Demo", team: true };
     state.leads = DEMO_LEADS.map((l) => ({ ...l }));
-    banner("Demo: sample leads from the September call transcripts. Nothing here is real or saved.");
+    banner(state.noKey
+      ? "Sample data only: these leads are from the September call transcripts, not real customers. Open your private link to see the studio's real leads."
+      : "Demo: sample leads from the September call transcripts. Nothing here is real or saved.");
+    pickDefaults();
     return render();
   }
-  if (!state.key) return locked();
+  if (!state.key) { state.demo = true; state.noKey = true; return load(); }
   try {
     const d = await api("/leads");
     state.live = true; state.who = d.who; state.leads = d.leads;
     banner(null);
+    pickDefaults();
     render();
   } catch (e) {
     if (e.locked) { try { localStorage.removeItem(KEY_STORE); } catch {} state.key = null; return locked(); }
     banner("Could not load the leads right now. Please refresh in a moment.", true);
     render();
   }
+}
+
+// Team links start on "All" (so declined and urgent leads are visible); a designer starts on "Needs action" unless it is empty.
+function pickDefaults() {
+  const mine = scoped();
+  state.tab = state.who?.team || !mine.some(needsAction) ? "all" : "action";
 }
 
 function locked() {
@@ -122,7 +132,7 @@ function render() {
   $("stats").innerHTML = [
     ["Need action", mine.filter(needsAction).length],
     ["Upcoming", mine.filter(upcoming).length],
-    ["Won", mine.filter((l) => l.stage === "won").length],
+    ["All leads", mine.length],
   ].map(([k, v]) => `<div class="stat"><b>${v}</b><span>${k}</span></div>`).join("");
 
   $("tabs").innerHTML = TABS.map(([k, label, fn]) =>
@@ -136,16 +146,19 @@ function render() {
     : "";
 
   const rows = visible();
+  // On a wide screen, open the first lead straight away so the right-hand panel is never blank.
+  if (window.innerWidth > 700 && !rows.some((l) => l.id === state.selected)) state.selected = rows[0]?.id ?? null;
   $("list").innerHTML = rows.length ? rows.map(card).join("") : `<li class="empty">Nothing here right now.</li>`;
   renderDetail();
 
-  $("who").textContent = state.live ? `${state.who?.label ?? ""} · Live` : "Demo";
+  $("who").textContent = state.live ? `${state.who?.label ?? ""} · Live` : state.noKey ? "Sample data" : "Demo";
   $("who").className = "chip" + (state.live ? " live" : "");
   const team = !!state.who?.team;
   const names = [...new Set(state.leads.map((l) => l.designer_name).filter(Boolean))];
   $("designer").hidden = !(team && names.length);
   $("designer").innerHTML = `<option value="all">All designers</option>` + names.map((d) => `<option ${state.designer === d ? "selected" : ""}>${esc(d)}</option>`).join("");
   $("forget").hidden = state.demo;
+  $("who").title = state.live ? "Real leads" : "Sample data, not real customers";
 }
 
 function card(l) {
