@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Aangan Designer Desk</title>
 <link rel="stylesheet" href="styles.css">
@@ -12,9 +13,9 @@
   <div class="brand"><span class="mark"></span><div><strong>Aangan Studio</strong><small>Designer Desk</small></div></div>
   <div class="who">
     <label class="sr" for="designer">Designer</label>
-    <select id="designer"></select>
-    <span id="mode" class="chip"></span>
-    <button id="connect" class="ghost">Sign in</button>
+    <select id="designer" hidden></select>
+    <span id="who" class="chip"></span>
+    <button id="forget" class="ghost" title="Remove the private link from this device">Sign out</button>
   </div>
 </header>
 
@@ -25,34 +26,13 @@
     <div class="stats" id="stats"></div>
     <div class="tools">
       <div class="tabs" role="tablist" id="tabs"></div>
+      <div class="tabs" id="decisions" aria-label="Filter by decision"></div>
       <input id="search" type="search" placeholder="Search name, area, phone" aria-label="Search leads">
     </div>
     <ul id="list" class="list"></ul>
   </section>
   <section class="detail-pane" id="detail" aria-live="polite"></section>
 </main>
-
-<dialog id="dlg">
-  <form id="dlgForm">
-    <h2>Sign in</h2>
-    <p>Use the email and password your admin set up for you. You stay signed in only while this tab is open.</p>
-    <label class="fld">Email<input id="email" type="email" autocomplete="username" required></label>
-    <label class="fld">Password<input id="password" type="password" autocomplete="current-password" required></label>
-    <p id="authErr" class="authErr" role="alert" hidden></p>
-    <div class="row"><button type="button" id="cancel" class="ghost">Cancel</button><button type="submit" class="primary" id="go">Sign in</button></div>
-  </form>
-</dialog>
-
-<dialog id="resetDlg">
-  <form id="resetForm">
-    <h2>Set your password</h2>
-    <p>Choose a password for your Designer Desk login (at least 8 characters).</p>
-    <label class="fld">New password<input id="newPw" type="password" autocomplete="new-password" minlength="8" required></label>
-    <label class="fld">Repeat password<input id="newPw2" type="password" autocomplete="new-password" minlength="8" required></label>
-    <p id="resetErr" class="authErr" role="alert" hidden></p>
-    <div class="row"><button type="submit" class="primary" id="resetGo">Set password</button></div>
-  </form>
-</dialog>
 
 <script type="module" src="app.js"></script>
 </body>

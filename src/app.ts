@@ -2,6 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 import express from "express";
 import { join } from "node:path";
 import { db } from "./db/pool.js";
+import { deskRouter } from "./desk/api.js";
 import { parseCalEvent, recordCalBooking, signatureOk } from "./cal/webhook.js";
 import { processPostCall, recordCallEnded, recordCallStarted } from "./pipeline/processCall.js";
 import { redact } from "./util/redact.js";
@@ -15,6 +16,10 @@ const safeEqual = (a: string, b: string) => {
   const x = Buffer.from(a), y = Buffer.from(b);
   return x.length === y.length && timingSafeEqual(x, y);
 };
+
+// Private pages and data: keep them out of search engines.
+app.use((_req, res, next) => { res.setHeader("X-Robots-Tag", "noindex, nofollow"); next(); });
+app.use("/api/desk", deskRouter(db));
 
 // The Designer Desk (static site). It holds no secrets; live data needs a sign-in.
 app.use(express.static(join(process.cwd(), "web"), { index: "index.html", maxAge: "5m" }));

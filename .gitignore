@@ -14,3 +14,5 @@ docs/webhook-urls.local.txt
 .env*
 
 .claude/
+
+docs/desk-links.local.txt

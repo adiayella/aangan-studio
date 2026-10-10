@@ -1,19 +1,37 @@
-import { API_URL, STAGES } from "./config.js";
-import { DEMO_LEADS, DESIGNERS } from "./demo-data.js";
-import { signIn, signOut, stored, refresh, resetPassword } from "./auth.js";
+import { STAGES } from "./config.js";
+import { DEMO_LEADS } from "./demo-data.js";
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[m]);
 const safeUrl = (u) => (/^https?:\/\//i.test(u || "") ? u : "");
 const TZ = "Asia/Kolkata";
+const KEY_STORE = "aangan_desk_key";
 
-const state = { leads: [], tab: "action", q: "", selected: null, designer: "all", live: false, token: null };
-state.token = stored()?.jwt || null;
+const state = { leads: [], tab: "action", decision: "all", q: "", selected: null, designer: "all", live: false, who: null, demo: false, key: null };
+
+// ---- access: a private link carries the key in the #fragment (never sent to the server in the address) ----
+function readHash() {
+  const h = new URLSearchParams(location.hash.replace(/^#/, ""));
+  return { key: h.get("key"), lead: h.get("lead"), demo: h.has("demo") };
+}
+function initAccess() {
+  const h = readHash();
+  state.demo = h.demo;
+  if (h.key) {
+    try { localStorage.setItem(KEY_STORE, h.key); } catch {}
+    state.key = h.key;
+    history.replaceState(null, "", location.pathname + (h.lead ? `#lead=${encodeURIComponent(h.lead)}` : "")); // the key leaves the address bar immediately
+  } else {
+    try { state.key = localStorage.getItem(KEY_STORE); } catch { state.key = null; }
+  }
+  if (h.lead) state.selected = h.lead;
+}
 
 const VERDICT = {
-  QUALIFIED: ["Qualified", "ok"], NEEDS_REVIEW: ["Needs review", "warn"],
-  ESCALATION: ["Urgent", "bad"], UNQUALIFIED: ["Not a fit", ""],
+  QUALIFIED: ["Selected", "ok"], NEEDS_REVIEW: ["Needs review", "warn"],
+  ESCALATION: ["Urgent", "bad"], UNQUALIFIED: ["Declined", ""],
 };
+const DECISIONS = [["all", "All"], ["QUALIFIED", "Selected"], ["NEEDS_REVIEW", "Needs review"], ["UNQUALIFIED", "Declined"], ["ESCALATION", "Urgent"]];
 const fmtDT = (iso) => new Date(iso).toLocaleString("en-IN", { timeZone: TZ, weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
 const ago = (iso) => {
   const m = Math.max(1, Math.round((Date.now() - new Date(iso)) / 60000));
@@ -23,37 +41,42 @@ const ago = (iso) => {
 };
 const stageLabel = (k) => (STAGES.find((s) => s[0] === k) || [k, k])[1];
 
-// ---- data layer: Neon Data API (PostgREST) when a token is set, demo data otherwise ----
-async function api(path, opts = {}, retried = false) {
-  const r = await fetch(`${API_URL}${path}`, {
-    ...opts,
-    headers: { Authorization: `Bearer ${state.token}`, "Content-Type": "application/json", ...(opts.headers || {}) },
-  });
-  if (r.status === 401 && !retried) {
-    const s = await refresh();
-    if (s) { state.token = s.jwt; return api(path, opts, true); }
-  }
-  if (!r.ok) throw new Error(`${r.status} ${(await r.text()).slice(0, 200)}`);
-  return r.status === 204 ? null : r.json().catch(() => null);
+// ---- data ----
+async function api(path, opts = {}) {
+  const r = await fetch(`/api/desk${path}`, { ...opts, headers: { "x-desk-key": state.key || "", "Content-Type": "application/json", ...(opts.headers || {}) } });
+  if (r.status === 401) { const e = new Error("locked"); e.locked = true; throw e; }
+  if (!r.ok) throw new Error(`${r.status}`);
+  return r.json();
 }
 
 async function load() {
-  if (state.token) {
-    try {
-      state.leads = await api("/designer_leads?select=*&order=created_at.desc&limit=200");
-      state.live = true;
-      banner(null);
-    } catch (e) {
-      state.live = false;
-      state.leads = DEMO_LEADS.map((l) => ({ ...l }));
-      banner(`Could not load live data (${e.message}). Showing demo data instead.`, true);
-    }
-  } else {
-    state.live = false;
+  if (state.demo) {
+    state.live = false; state.who = { label: "Demo", team: true };
     state.leads = DEMO_LEADS.map((l) => ({ ...l }));
-    banner("Demo mode: these are sample leads from the September call transcripts. Click Sign in to use the live database.");
+    banner("Demo: sample leads from the September call transcripts. Nothing here is real or saved.");
+    return render();
   }
-  render();
+  if (!state.key) return locked();
+  try {
+    const d = await api("/leads");
+    state.live = true; state.who = d.who; state.leads = d.leads;
+    banner(null);
+    render();
+  } catch (e) {
+    if (e.locked) { try { localStorage.removeItem(KEY_STORE); } catch {} state.key = null; return locked(); }
+    banner("Could not load the leads right now. Please refresh in a moment.", true);
+    render();
+  }
+}
+
+function locked() {
+  state.live = false; state.who = null; state.leads = [];
+  $("stats").innerHTML = ""; $("tabs").innerHTML = ""; $("decisions").innerHTML = "";
+  $("list").innerHTML = `<li class="empty"><b>This dashboard opens with a private link.</b><br>Ask the studio for your link, then open it on this device. It signs you in automatically; there is no email or password.</li>`;
+  $("detail").innerHTML = "";
+  $("who").textContent = "Private link needed"; $("who").className = "chip";
+  $("designer").hidden = true; $("forget").hidden = true;
+  banner(null);
 }
 
 async function setStage(lead, stage) {
@@ -61,13 +84,8 @@ async function setStage(lead, stage) {
   lead.stage = stage;
   render();
   if (!state.live) return;
-  try {
-    await api(`/enquiries?id=eq.${encodeURIComponent(lead.id)}`, { method: "PATCH", body: JSON.stringify({ stage }), headers: { Prefer: "return=minimal" } });
-  } catch (e) {
-    lead.stage = prev;
-    render();
-    banner(`Could not save the change (${e.message}).`, true);
-  }
+  try { await api(`/leads/${encodeURIComponent(lead.id)}/stage`, { method: "POST", body: JSON.stringify({ stage }) }); }
+  catch { lead.stage = prev; render(); banner("Could not save that change. Please try again.", true); }
 }
 
 // ---- view ----
@@ -79,26 +97,28 @@ function banner(msg, err = false) {
 }
 
 const isOpen = (l) => !["won", "lost", "consult_done"].includes(l.stage);
-const needsAction = (l) => (l.verdict === "ESCALATION" || l.verdict === "NEEDS_REVIEW" || l.stage === "new") && isOpen(l);
-const upcoming = (l) => l.consult_start && new Date(l.consult_start) > new Date() && isOpen(l);
+const needsAction = (l) => (l.verdict === "ESCALATION" || l.verdict === "NEEDS_REVIEW" || l.stage === "new") && isOpen(l) && l.verdict !== "UNQUALIFIED";
+const upcoming = (l) => l.consult_start && new Date(l.consult_start) > new Date() && isOpen(l) && l.consult_status !== "cancelled";
 const TABS = [
   ["action", "Needs action", needsAction],
   ["upcoming", "Consultations", upcoming],
   ["all", "All", () => true],
 ];
 
+const scoped = () => state.leads.filter((l) => state.designer === "all" || l.designer_name === state.designer);
+
 function visible() {
   const q = state.q.trim().toLowerCase();
   const tab = TABS.find((t) => t[0] === state.tab)[2];
-  return state.leads
-    .filter((l) => state.designer === "all" || l.designer_name === state.designer)
+  return scoped()
     .filter(tab)
+    .filter((l) => state.decision === "all" || l.verdict === state.decision)
     .filter((l) => !q || [l.customer_name, l.locality, l.phone, l.property_type].join(" ").toLowerCase().includes(q))
     .sort((a, b) => (state.tab === "upcoming" ? new Date(a.consult_start) - new Date(b.consult_start) : (b.verdict === "ESCALATION") - (a.verdict === "ESCALATION") || new Date(b.created_at) - new Date(a.created_at)));
 }
 
 function render() {
-  const mine = state.leads.filter((l) => state.designer === "all" || l.designer_name === state.designer);
+  const mine = scoped();
   $("stats").innerHTML = [
     ["Need action", mine.filter(needsAction).length],
     ["Upcoming", mine.filter(upcoming).length],
@@ -108,15 +128,24 @@ function render() {
   $("tabs").innerHTML = TABS.map(([k, label, fn]) =>
     `<button class="tab" role="tab" data-tab="${k}" aria-selected="${state.tab === k}">${label}<span class="n">${mine.filter(fn).length}</span></button>`).join("");
 
+  // decision filters: Selected / Needs review / Declined / Urgent (only those that exist, plus All)
+  const present = new Set(mine.map((l) => l.verdict));
+  $("decisions").innerHTML = state.who?.team || present.size > 1
+    ? DECISIONS.filter(([k]) => k === "all" || present.has(k)).map(([k, label]) =>
+        `<button class="tab" data-decision="${k}" aria-selected="${state.decision === k}">${label}<span class="n">${k === "all" ? mine.length : mine.filter((l) => l.verdict === k).length}</span></button>`).join("")
+    : "";
+
   const rows = visible();
-  $("list").innerHTML = rows.length
-    ? rows.map(card).join("")
-    : `<li class="empty">Nothing here right now.</li>`;
+  $("list").innerHTML = rows.length ? rows.map(card).join("") : `<li class="empty">Nothing here right now.</li>`;
   renderDetail();
-  const m = $("mode");
-  m.textContent = state.live ? "Live" : "Demo";
-  m.className = "chip" + (state.live ? " live" : "");
-  $("connect").textContent = state.token ? "Sign out" : "Sign in";
+
+  $("who").textContent = state.live ? `${state.who?.label ?? ""} · Live` : "Demo";
+  $("who").className = "chip" + (state.live ? " live" : "");
+  const team = !!state.who?.team;
+  const names = [...new Set(state.leads.map((l) => l.designer_name).filter(Boolean))];
+  $("designer").hidden = !(team && names.length);
+  $("designer").innerHTML = `<option value="all">All designers</option>` + names.map((d) => `<option ${state.designer === d ? "selected" : ""}>${esc(d)}</option>`).join("");
+  $("forget").hidden = state.demo;
 }
 
 function card(l) {
@@ -125,7 +154,7 @@ function card(l) {
     ? `<span class="b ${l.consult_status === "confirmed" ? "ok" : "warn"}">${l.consult_status === "confirmed" ? "Booked" : "Pending"} · ${esc(fmtDT(l.consult_start))}</span>` : "";
   return `<li class="card" tabindex="0" role="button" data-id="${esc(l.id)}" aria-current="${state.selected === l.id}">
     <div class="r1"><span class="name">${esc(l.customer_name)}</span><span class="when">${esc(ago(l.created_at))}</span></div>
-    <div class="r2">${esc([l.property_type, l.locality].filter(Boolean).join(" · "))}</div>
+    <div class="r2">${esc([l.property_type, l.locality].filter(Boolean).join(" · "))}${l.designer_name && state.who?.team ? " · " + esc(l.designer_name) : ""}</div>
     <div class="badges"><span class="b ${vc}">${vl}</span><span class="b info">${esc(stageLabel(l.stage))}</span>${consult}</div></li>`;
 }
 
@@ -142,9 +171,9 @@ function renderDetail() {
   const consult = l.consult_start
     ? `<dl class="kv"><dt>When</dt><dd>${esc(fmtDT(l.consult_start))} (IST)</dd>
        <dt>Type</dt><dd>${l.consult_mode === "online" ? "Online meeting" : "Site visit"}</dd>
-       <dt>Where</dt><dd>${l.consult_mode === "online" ? (meet ? `<a href="${esc(meet)}">Google Meet link</a>` : "Link sent with the invite") : esc(l.consult_location || "Address to confirm")}</dd>
-       <dt>Status</dt><dd>${l.consult_status === "confirmed" ? "Confirmed in Google Calendar" : "Pending confirmation. Not yet on the calendar."}</dd></dl>`
-    : `<p class="hint">No consultation booked yet.</p>`;
+       <dt>Where</dt><dd>${l.consult_mode === "online" ? (meet ? `<a href="${esc(meet)}" target="_blank" rel="noopener">Meeting link</a>` : "Link in the calendar entry") : esc(l.consult_location || "Address to confirm")}</dd>
+       <dt>Status</dt><dd>${l.consult_status === "confirmed" ? "Booked on the calendar. The customer has not been told it is confirmed." : l.consult_status === "cancelled" ? "Cancelled" : "Requested, not on the calendar yet."}</dd></dl>`
+    : `<p class="hint">No appointment yet.</p>`;
 
   el.innerHTML = `
     <button class="ghost back" id="back">← All leads</button>
@@ -153,24 +182,25 @@ function renderDetail() {
     <div class="actions">
       ${tel ? `<a class="btn primary" href="tel:${esc(tel)}">Call ${esc(l.phone)}</a>` : ""}
       ${l.email ? `<a class="btn" href="mailto:${esc(l.email)}">Email</a>` : ""}
-      ${hub && hub !== "#" ? `<a class="btn" href="${esc(hub)}" target="_blank" rel="noopener">Open in HubSpot</a>` : ""}
+      ${hub ? `<a class="btn" href="${esc(hub)}" target="_blank" rel="noopener">Open in HubSpot</a>` : ""}
     </div>
-    <div class="sec"><h3>Call summary</h3><p class="summary">${esc(l.summary)}</p></div>
+    <div class="sec"><h3>Call summary</h3><p class="summary">${esc(l.summary || "Summary not available.")}</p></div>
     ${l.notes?.length ? `<div class="sec"><h3>Watch out for</h3><ul class="crit">${l.notes.map((n) => `<li><span class="dot unclear">!</span><span>${esc(n)}</span></li>`).join("")}</ul></div>` : ""}
     <div class="sec"><h3>Project</h3><dl class="kv">
-      <dt>Requirements</dt><dd>${esc(l.requirements)}</dd>
+      <dt>Requirements</dt><dd>${esc(l.requirements || "Not given")}</dd>
       <dt>Type</dt><dd>${esc(l.segment === "commercial" ? "Commercial" : "Residential")} · ${esc(l.property_type || "—")}</dd>
       <dt>Carpet area</dt><dd>${l.area_sqft ? esc(l.area_sqft) + " sq ft" : "Not given"}</dd>
       <dt>Timeline</dt><dd>${esc(l.deadline_text || "Not given")}</dd></dl></div>
-    <div class="sec"><h3>Consultation</h3>${consult}</div>
-    ${crit ? `<div class="sec"><h3>Why this was passed to you</h3><ul class="crit">${crit}</ul></div>` : ""}
+    <div class="sec"><h3>Appointment</h3>${consult}</div>
+    ${crit ? `<div class="sec"><h3>${l.verdict === "UNQUALIFIED" ? "Why this was declined" : "Why this was selected"}</h3><ul class="crit">${crit}</ul>${l.explanation ? `<p class="hint">${esc(l.explanation)}</p>` : ""}</div>` : ""}
     <div class="sec"><h3>Contact</h3><dl class="kv">
       <dt>Phone</dt><dd>${esc(l.phone || "—")}</dd><dt>Email</dt><dd>${esc(l.email || "Not captured")}</dd>
-      <dt>Call length</dt><dd>${mins}</dd><dt>Handoff email</dt><dd>${esc(l.email_status || "—")}</dd></dl></div>
+      <dt>Designer</dt><dd>${esc(l.designer_name || "Unassigned")}</dd>
+      <dt>Call length</dt><dd>${mins}</dd><dt>Designer email</dt><dd>${esc(l.email_status || "—")}</dd></dl></div>
     <div class="sec"><h3>Your progress</h3><div class="stage">
       <label class="sr" for="stage">Stage</label>
       <select id="stage">${STAGES.map(([k, v]) => `<option value="${k}" ${k === l.stage ? "selected" : ""}>${v}</option>`).join("")}</select>
-      <span class="hint">${state.live ? "Saved to the database." : "Demo mode: changes are not saved."}</span></div></div>`;
+      <span class="hint">${state.live ? "Saved automatically." : "Demo: changes are not saved."}</span></div></div>`;
 }
 
 // ---- events ----
@@ -178,52 +208,12 @@ function select(id) { state.selected = id; document.body.classList.add("show-det
 $("list").addEventListener("click", (e) => { const c = e.target.closest(".card"); if (c) select(c.dataset.id); });
 $("list").addEventListener("keydown", (e) => { if ((e.key === "Enter" || e.key === " ") && e.target.matches(".card")) { e.preventDefault(); select(e.target.dataset.id); } });
 $("tabs").addEventListener("click", (e) => { const t = e.target.closest(".tab"); if (t) { state.tab = t.dataset.tab; render(); } });
+$("decisions").addEventListener("click", (e) => { const t = e.target.closest("[data-decision]"); if (t) { state.decision = t.dataset.decision; render(); } });
 $("search").addEventListener("input", (e) => { state.q = e.target.value; render(); });
-$("detail").addEventListener("click", (e) => { if (e.target.id === "back") { document.body.classList.remove("show-detail"); } });
-$("detail").addEventListener("change", (e) => {
-  if (e.target.id === "stage") setStage(state.leads.find((x) => x.id === state.selected), e.target.value);
-});
+$("detail").addEventListener("click", (e) => { if (e.target.id === "back") document.body.classList.remove("show-detail"); });
+$("detail").addEventListener("change", (e) => { if (e.target.id === "stage") setStage(state.leads.find((x) => x.id === state.selected), e.target.value); });
 $("designer").addEventListener("change", (e) => { state.designer = e.target.value; state.selected = null; render(); });
-$("connect").addEventListener("click", () => {
-  if (state.token) { signOut(); state.token = null; state.selected = null; load(); return; }
-  $("authErr").hidden = true; $("dlg").showModal();
-});
-$("cancel").addEventListener("click", () => $("dlg").close());
-$("dlgForm").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const go = $("go"); go.disabled = true; go.textContent = "Signing in…";
-  try {
-    const s = await signIn($("email").value.trim(), $("password").value);
-    state.token = s.jwt; $("password").value = ""; $("dlg").close(); await load();
-  } catch (err) {
-    $("authErr").textContent = err.message; $("authErr").hidden = false;
-  } finally { go.disabled = false; go.textContent = "Sign in"; }
-});
+$("forget").addEventListener("click", () => { try { localStorage.removeItem(KEY_STORE); } catch {} state.key = null; locked(); });
 
-$("designer").innerHTML = `<option value="all">All designers</option>` + DESIGNERS.map((d) => `<option>${esc(d)}</option>`).join("");
+initAccess();
 load();
-
-// ---- password reset (arrives from the emailed link as ?token=...) ----
-{
-  const q = new URLSearchParams(location.search);
-  const token = q.get("token");
-  const linkError = q.get("error");
-  if (token || linkError) history.replaceState(null, "", location.pathname); // never leave the one-time code in the address bar
-  if (linkError) banner("That password link is invalid or has expired. Ask your admin for a new reset email.", true);
-  if (token) {
-    $("resetDlg").showModal();
-    $("resetForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const p1 = $("newPw").value, p2 = $("newPw2").value, err = $("resetErr"), go = $("resetGo");
-      if (p1 !== p2) { err.textContent = "The two passwords do not match."; err.hidden = false; return; }
-      go.disabled = true; go.textContent = "Saving…"; err.hidden = true;
-      try {
-        await resetPassword(token, p1);
-        $("newPw").value = ""; $("newPw2").value = "";
-        $("resetDlg").close();
-        banner("Password set. Click Sign in and use your email and the new password.");
-      } catch (x) { err.textContent = x.message; err.hidden = false; }
-      finally { go.disabled = false; go.textContent = "Set password"; }
-    });
-  }
-}
