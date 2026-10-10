@@ -114,10 +114,15 @@ export async function processPostCall(db: Db, ev: Postprocessing, opts: { syncHu
   if (wantsConsult && ex.consult_preferred_start) {
     const callStart = new Date(new Date(ev.at ?? Date.now()).getTime() - (ev.durationSec ?? 0) * 1000 - 10 * 60 * 1000).toISOString();
     const row = (await db.query(
-      `select id from appointments where enquiry_id is null and cal_booking_uid is not null and cal_status = 'confirmed'
+      `select id, cal_booking_uid, starts_at, ends_at, host_email, meet_link, title, attendee_email, attendee_name, attendee_timezone from appointments where enquiry_id is null and cal_booking_uid is not null and cal_status = 'confirmed'
          and abs(extract(epoch from (starts_at - $1::timestamptz))) < 60 and updated_at >= $2 order by updated_at desc limit 1`,
       [ex.consult_preferred_start, callStart])).rows[0];
-    if (row) linkedAppointmentId = row.id;
+    if (row) {
+      linkedAppointmentId = row.id;
+      // Keep the stored booking's details so the designer email and HubSpot show host, time and meeting link.
+      booking = { uid: row.cal_booking_uid, id: null, status: "accepted", start: new Date(row.starts_at).toISOString(), end: row.ends_at ? new Date(row.ends_at).toISOString() : "", title: row.title ?? "",
+        hostName: null, hostEmail: row.host_email, attendeeEmail: row.attendee_email, attendeeName: row.attendee_name, attendeeTimeZone: row.attendee_timezone, meetingUrl: row.meet_link, description: null, duration: null, createdAt: null };
+    }
     else if (calConfigured()) booking = await findBookingNear(ex.consult_preferred_start, callStart, validEmail(ex.caller_email)).catch(() => null);
   }
   const consultStatus: "none" | "pending" | "confirmed" = !wantsConsult ? "none" : booking || linkedAppointmentId ? "confirmed" : "pending";
