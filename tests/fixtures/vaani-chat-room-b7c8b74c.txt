@@ -1,0 +1,24 @@
+AGENT: Hello! Thank you for calling Aangan Studio. I am the studio's AI assistant. How can I help you with your interior design project today?
+USER: i am looking to design my room
+AGENT: Hello! I would love to help you with that.
+AGENT: Aangan Studio does complete redesigns including both design and execution.
+AGENT: Could you share where your property is located, and whether it is in Pune or PCMC?
+USER: it is in pune
+AGENT: that is great! Which area in Pune is your property located in, and is it an apartment or an independent home?
+USER: it =is an apartment
+AGENT: that is good to know.
+AGENT: Which specific area in Pune is your apartment located in?
+USER: wakad
+AGENT: Wakad is well within our service area! Since you are looking to design your room, is this a complete redesign including full execution, and roughly how large is the space?
+USER: 1500 sft
+AGENT: That is a spacious room! Just to make sure I understand, is this a single room of one thousand five hundred square feet, or a complete one thousand five hundred square foot apartment?
+USER: a room total apartment if 5000 square feet
+AGENT: Got it, a one thousand five hundred square foot room in a five thousand square foot apartment! We can certainly help with a complete redesign and execution for that.
+AGENT: Is the apartment ready for work right now, or are you waiting on possession?
+USER: it is ready for work
+AGENT: that is great that it is ready! When would you be looking to have the project completely finished?
+USER: in a week
+AGENT: I completely understand, but our design and execution process typically takes a few months to complete properly.
+AGENT: Since a one-week timeline would not be possible for us, this sounds like it may not be the right fit right now.
+AGENT: You are always welcome to reach back out if your timeline changes.
+AGENT: Thank you for calling Aangan Studio, and have a wonderful day ahead!

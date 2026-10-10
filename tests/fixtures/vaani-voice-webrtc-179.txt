@@ -1,0 +1,25 @@
+AGENT: Hello! Thank you for calling Aangan Studio, I am the studio's AI assistant, How can I help you with your interior design project today?
+USER: I'm planning to design my apartment. So I need an interior designer to do that work.
+AGENT: I completely understand. Having a designer who really listens and takes complete ownership of the execution makes all the difference. We would love to help you with your apartment design. To see if
+USER: No. I want help with bedrooms and hall.
+AGENT: Got it, bedrooms and a hall. To make sure we're the right fit, is
+USER: How are you?
+AGENT: I'm doing well, thank you for asking! I was asking earlier, is your apartment located in Pune or PCMC?
+USER: Yeah. It is in Pune. Yeah. It is in Hinjewadi.
+AGENT: Hinjewadi in Pune, perfect! And roughly what is the carpet area or size of the apartment?
+USER: It is 4,000 square feet.
+AGENT: That's a spacious 4,000 square feet! Is it a full redesign along with complete execution work?
+USER: Yes. Yes.
+AGENT: Great! When are you hoping to have the project completely finished?
+USER: So in span of six months?
+AGENT: That's a very workable timeline for a 4,000 square foot home. Would you like me to arrange a free 30-minute consultation with a designer to discuss your project?
+USER: Yeah. That would be helpful.
+AGENT: Wonderful! I have a few available slots coming up: Monday, October 12th at 9:00 AM or 4:30 PM IST. Tuesday, October 13th at 9:00 AM IST. Which of these day and time options works best for you?
+USER: October 13, 9AM would be great.
+AGENT: October 13th at 9:00 AM India Standard Time works well. May I please have your full name, email address, and phone number?
+USER: My full name is Adwight. My email address is ayla.adwight@gmail.com. And my phone number is one two three four five six seven eight.
+AGENT: Thank you, Adwaith. To confirm your email, that's a-y-l-a dot a-d-w-i-g-h-t at gmail dot com. Is that correct?
+USER: Yeah.
+AGENT: Your appointment is confirmed for Tuesday, October 13, 2026 at 9:00 AM IST for a 30-minute consultation regarding the interior design of your 4,000 square foot home in Hinjewadi. The video link and invitation have been sent to ayla.adwight@gmail.com. Is there anything else I can help you with today?
+USER: Nothing else. That'll be it.
+AGENT: Thank you for calling Aangan Studio. Have a wonderful day ahead!

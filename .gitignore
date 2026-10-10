@@ -1,0 +1,16 @@
+node_modules
+.env
+.env.local
+.env.*.local
+.vercel
+dist
+*.log
+
+# local-only files with webhook addresses and secrets
+docs/webhook-urls.local.txt
+.vercel
+
+.vercel
+.env*
+
+.claude/

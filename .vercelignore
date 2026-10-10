@@ -1,0 +1,9 @@
+.env
+.env.*
+node_modules
+tests
+scripts
+docs
+web
+.claude
+*.log
