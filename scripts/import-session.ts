@@ -7,6 +7,7 @@ const [file, key, startedAt, dur, cost] = process.argv.slice(2).filter((a) => !a
 const mock = process.argv.includes("--mock-hubspot");
 process.env.HUBSPOT_SYNC_MODE = mock ? "mock" : "live";
 process.env.EMAIL_MODE = process.argv.includes("--live-email") ? "live" : "mock";
+process.env.CAL_FALLBACK_BOOKING = process.argv.includes("--book") ? "on" : "off"; // replays never touch the real calendar unless asked
 
 const { db, closeDb } = await import("../src/db/pool.js");
 const { processPostCall } = await import("../src/pipeline/processCall.js");

@@ -37,7 +37,7 @@ left join customers c on c.id = e.customer_id
 left join calls ca on ca.id = e.call_id
 left join lateral (select * from appointments a where a.enquiry_id = e.id order by a.created_at desc limit 1) ap on true
 left join hubspot_sync hs on hs.enquiry_id = e.id
-where ($1::uuid is null or (e.designer_id = $1 and e.verdict in ('QUALIFIED','NEEDS_REVIEW')))
+where not e.hidden and ($1::uuid is null or (e.designer_id = $1 and e.verdict in ('QUALIFIED','NEEDS_REVIEW')))
 order by e.created_at desc
 limit 300`;
 

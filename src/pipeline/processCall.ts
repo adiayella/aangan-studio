@@ -10,6 +10,7 @@ import { estimateValue } from "../value/estimate.js";
 import { redact } from "../util/redact.js";
 import { notifyEnquiry } from "../email/notify.js";
 import { calConfigured, findBookingNear, type Booking } from "../cal/client.js";
+import { bookAfterCall } from "../cal/fallback.js";
 import type { EmailLead } from "../email/templates.js";
 import type { VaaniEvent } from "../vaani/payload.js";
 
@@ -124,6 +125,13 @@ export async function processPostCall(db: Db, ev: Postprocessing, opts: { syncHu
         hostName: null, hostEmail: row.host_email, attendeeEmail: row.attendee_email, attendeeName: row.attendee_name, attendeeTimeZone: row.attendee_timezone, meetingUrl: row.meet_link, description: null, duration: null, createdAt: null };
     }
     else if (calConfigured()) booking = await findBookingNear(ex.consult_preferred_start, callStart, validEmail(ex.caller_email)).catch(() => null);
+  }
+  let fallbackNote = "";
+  if (wantsConsult && !booking && !linkedAppointmentId && ex.consult_preferred_start && calConfigured()) {
+    const host = (await db.query("select email from designers where active and role = 'designer' order by created_at limit 1")).rows[0]?.email ?? null;
+    const fb = await bookAfterCall({ startISO: ex.consult_preferred_start, name: ex.customer_name, phone: normalizePhone(call.caller_phone) ?? normalizePhone(ex.caller_phone), callerEmail: ex.caller_email, hostFallbackEmail: host,
+      title: `Aangan consultation: ${ex.customer_name ?? "new enquiry"}${ex.facts.locality ? " · " + ex.facts.locality : ""}`, notes: "Booked automatically after the call. The customer has NOT been told the slot is confirmed; please call to confirm.", callKey: ev.callKey }).catch((e) => ({ booking: null, detail: `error: ${e instanceof Error ? e.message : e}` }));
+    booking = fb.booking; fallbackNote = fb.detail;
   }
   const consultStatus: "none" | "pending" | "confirmed" = !wantsConsult ? "none" : booking || linkedAppointmentId ? "confirmed" : "pending";
   const ind = indicators({ call_status: "completed", analysis: "done", verdict: q.verdict, consult_status: consultStatus, callback_requested: ex.callback_requested, sentiment: ex.sentiment });

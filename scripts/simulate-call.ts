@@ -11,6 +11,7 @@ const keep = args.includes("--keep");
 process.env.HUBSPOT_SYNC_MODE = live ? "live" : "mock";
 // Simulations never send real email unless asked: --live-email
 process.env.EMAIL_MODE = args.includes("--live-email") ? "live" : "mock";
+process.env.CAL_FALLBACK_BOOKING = process.argv.includes("--book") ? "on" : "off"; // replays never touch the real calendar unless asked
 if (args.includes("--live-email")) process.env.EMAIL_SUBJECT_PREFIX = "[TEST — simulated call] ";
 const showEmail = args.includes("--show-email");
 

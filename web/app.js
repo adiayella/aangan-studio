@@ -63,7 +63,7 @@ async function load() {
     try {
       const d = await api("/public");
       state.live = true; state.readOnly = true; state.who = d.who; state.leads = d.leads;
-      banner("Live calls from the Vaani voice agent. Contact details are hidden here; open your private link to see them and update stages.");
+      banner(null);
       pickDefaults(); return render();
     } catch { state.demo = true; state.noKey = true; return load(); }
   }
